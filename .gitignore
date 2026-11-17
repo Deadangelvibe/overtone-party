@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+!versions/
+
+# Minecraft / Launcher
+run/
+runs/
+.mc-refresh/
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
