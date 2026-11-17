@@ -5,8 +5,9 @@
   "name": "Overtone Party",
   "description": "Совместное прослушивание музыки Overtone: один диджей, общая очередь, синхронная позиция у всех участников. Работает по LAN и через e4mc.",
   "authors": [
-    "Alexandr"
+    "deadangelvibe"
   ],
+  "icon": "assets/overtone_party/icon.png",
   "license": "MIT",
   "environment": "*",
   "mixins": [
