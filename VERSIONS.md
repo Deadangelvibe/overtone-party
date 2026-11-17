@@ -12,31 +12,28 @@
 
 ## Как залить проект на GitHub со всеми версиями
 
-Git в системе не установлен. После установки [Git for Windows](https://git-scm.com/download/win)
-выполните в папке проекта (`C:\Users\Александр\overtone-party`):
+Портативный Git уже установлен:
+`C:\Users\Александр\AppData\Local\Programs\PortableGit\cmd\git.exe`.
+GitHub CLI: `C:\Users\Александр\AppData\Local\Programs\GitHubCLI\bin\gh.exe`.
+
+Локальная история уже создана: `v0.2.6` → `v0.2.7` → `v0.3.0` (ветка `main`, рабочее дерево чистое).
+Осталось только авторизоваться в GitHub и запушить.
+
+Самый простой способ — запустить из папки проекта:
 
 ```powershell
-git init
-git config user.name "Ваше имя"
-git config user.email "you@example.com"
+powershell -ExecutionPolicy Bypass -File .\push-to-github.ps1
+```
 
-# История по версиям: сначала старые артефакты, потом исходники 0.3.0
-git add versions/overtone-party-0.2.6.jar README.md
-git commit -m "Release 0.2.6"
-git tag v0.2.6
+Скрипт сам выполнит вход через браузер, спросит URL репозитория и запушит `main` со всеми тегами.
 
-git add versions/overtone-party-0.2.7.jar
-git commit -m "Release 0.2.7"
-git tag v0.2.7
+Вручную:
 
-git add .
-git commit -m "Release 0.3.0: multiple parties, browser, private parties"
-git tag v0.3.0
-
-# Далее — создайте репозиторий на GitHub и выполните команды ниже (замените URL)
-git remote add origin https://github.com/<вас>/overtone-party.git
-git branch -M main
-git push -u origin main --tags
+```powershell
+& 'C:\Users\Александр\AppData\Local\Programs\GitHubCLI\bin\gh.exe' auth login --web
+$git = 'C:\Users\Александр\AppData\Local\Programs\PortableGit\cmd\git.exe'
+& $git remote add origin https://github.com/<вас>/overtone-party.git
+& $git push -u origin main --tags
 ```
 
 Для будущих версий: после каждого релиза копируйте готовый jar в `versions/`,
