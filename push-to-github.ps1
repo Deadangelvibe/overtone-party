@@ -1,27 +1,27 @@
-# Помощник для публикации репозитория Overtone Party на GitHub.
-# Запуск: powershell -ExecutionPolicy Bypass -File .\push-to-github.ps1
+# Helper: authenticate GitHub CLI and push the Overtone Party repository.
+# Run: powershell -ExecutionPolicy Bypass -File .\push-to-github.ps1
 $ErrorActionPreference = 'Stop'
 
-$git = 'C:\Users\Александр\AppData\Local\Programs\PortableGit\cmd\git.exe'
-$gh  = 'C:\Users\Александр\AppData\Local\Programs\GitHubCLI\bin\gh.exe'
+$git = Join-Path $env:LOCALAPPDATA 'Programs\PortableGit\cmd\git.exe'
+$gh  = Join-Path $env:LOCALAPPDATA 'Programs\GitHubCLI\bin\gh.exe'
 
 Set-Location $PSScriptRoot
 
-# 1. Авторизация GitHub CLI (если ещё не выполнено).
+# 1. Authenticate GitHub CLI if needed.
 & $gh auth status 2>$null | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host 'GitHub CLI не авторизован. Открываю вход через браузер...'
+    Write-Host 'GitHub CLI is not authenticated. Opening browser login...'
     & $gh auth login --web --git-protocol https
-    if ($LASTEXITCODE -ne 0) { throw 'Не удалось авторизоваться в GitHub.' }
+    if ($LASTEXITCODE -ne 0) { throw 'GitHub login failed.' }
 }
 
-# 2. Удаление репозитория (если ещё не добавлен).
+# 2. Add remote if missing.
 $url = & $git remote get-url origin 2>$null
 if (-not $url) {
-    $url = Read-Host 'Введите URL репозитория GitHub (https://github.com/<user>/<repo>.git)'
-    if ([string]::IsNullOrWhiteSpace($url)) { throw 'URL репозитория не введён.' }
+    $url = Read-Host 'Enter GitHub repository URL (https://github.com/<user>/<repo>.git)'
+    if ([string]::IsNullOrWhiteSpace($url)) { throw 'Repository URL is empty.' }
     & $git remote add origin $url
 }
 
-# 3. Пуш ветки и всех тегов версий.
+# 3. Push branch and all version tags.
 & $git push -u origin main --tags
