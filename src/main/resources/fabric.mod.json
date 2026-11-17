@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "overtone_party",
+  "version": "${version}",
+  "name": "Overtone Party",
+  "description": "Совместное прослушивание музыки Overtone: один диджей, общая очередь, синхронная позиция у всех участников. Работает по LAN и через e4mc.",
+  "authors": [
+    "Alexandr"
+  ],
+  "license": "MIT",
+  "environment": "*",
+  "mixins": [
+    "overtone-party.mixins.json"
+  ],
+  "entrypoints": {
+    "main": [
+      "dev.overtoneparty.OvertoneParty"
+    ],
+    "client": [
+      "dev.overtoneparty.client.PartyClientInit"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "fabric-api": "*",
+    "minecraft": "1.20.1",
+    "java": ">=17"
+  },
+  "suggests": {
+    "musicplayer": "*"
+  }
+}
