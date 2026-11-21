@@ -159,10 +159,15 @@
 - На Forge-клиенте (как в сборке «Lunchtime Cozy Create and Cooking») — **Sinytra Connector**
   и Forgified Fabric API (например, внутри `txnilib-forge`). Мод на сервере тоже нужен:
   при игре по LAN это встроенный сервер хоста, то есть достаточно поставить мод в клиент хоста.
+- Если сервер требует `takeitout`, ставьте **только** `takeitout-1.1.27-forge-1.20.1.jar`.
+  В пачке уже есть `MaFgLib` (Forge-порт malilib) — он содержит нужные TakeItOut классы
+  `fi.dy.masa.malilib.*`. Дополнительный `malilib-fabric-1.20.1-0.16.3.jar` ставить **нельзя**:
+  два jar с одинаковыми пакетами конфликтуют и игра падает с `MixinApplyError`
+  (`MixinInGameHud not found`).
 
 ## Установка
 
-1. Соберите или возьмите готовый `overtone-party-0.3.0.jar`.
+1. Соберите или возьмите готовый `overtone-party-0.3.2.jar`.
 2. Положите его в `mods` **каждому участнику** и на сервер (при LAN/e4mc — в клиент хоста).
    Любую старую версию `overtone-party` удалите: два одинаковых мода игра не запустит.
 3. Запустите игру, зайдите в мир.
@@ -223,7 +228,7 @@
 ./gradlew build
 ```
 
-Готовый jar: `build/libs/overtone-party-0.3.0.jar`. Старые сборки лежат в `versions/`.
+Готовый jar: `build/libs/overtone-party-0.3.2.jar`. Старые сборки лежат в `versions/`.
 
 Классы Overtone не входят в jar: в `stubs/` лежат только сигнатуры для компиляции,
 в рантайме используются настоящие классы из мода Overtone. Если Overtone не установлен,
