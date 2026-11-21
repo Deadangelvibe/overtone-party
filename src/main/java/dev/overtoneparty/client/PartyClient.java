@@ -489,6 +489,29 @@ public final class PartyClient {
         PartyClientNet.sendCommand(PartyNet.CMD_ADD_TRACK, List.of(t));
     }
 
+    /**
+     * Добавить сразу весь набор (кнопка «♪+ Всё» в открытом плейлисте/альбоме).
+     * Пакетный запрос уже есть в протоколе; здесь только проверки и понятная
+     * подсказка, если игрок ещё не в вечеринке.
+     */
+    public static void addTracks(List<PartyTrack> tracks) {
+        if (tracks == null || tracks.isEmpty()) return;
+        if (!member) {
+            notify("Сначала создайте свою вечеринку или присоединитесь к другой (клавиша P).");
+            return;
+        }
+        List<PartyTrack> clean = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (PartyTrack t : tracks) {
+            if (PartyTrack.isBlank(t)) continue;
+            String key = PartyTrack.providerKey(t.provider()) + '|' + t.id();
+            if (seen.add(key)) clean.add(t);
+            if (clean.size() >= PartyNet.MAX_TRACKS) break;
+        }
+        if (clean.isEmpty()) return;
+        PartyClientNet.sendCommand(PartyNet.CMD_ADD_TRACKS, clean);
+    }
+
     /** Очистить общую очередь (диджей/оператор). */
     public static void clearQueue() {
         PartyClientNet.sendCommand(PartyNet.CMD_CLEAR);

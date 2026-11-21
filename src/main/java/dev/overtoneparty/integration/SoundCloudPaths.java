@@ -5,7 +5,11 @@ import com.google.gson.JsonObject;
 
 /** Вспомогательные методы для адресов SoundCloud API. */
 public final class SoundCloudPaths {
-    private static final String ROOT = "https://api-v2.soundcloud.com";
+    /** Корень API SoundCloud — нужен и миксину библиотеки для досылки треков. */
+    public static final String ROOT = "https://api-v2.soundcloud.com";
+
+    /** Резервный client_id, если Overtone не смог отдать свой. */
+    public static final String CLIENT_ID = "qLcgHhXgeEFFaSolTB9I71LBsqncsD93";
 
     private SoundCloudPaths() {
     }

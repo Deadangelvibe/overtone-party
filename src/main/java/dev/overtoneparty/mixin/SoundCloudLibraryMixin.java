@@ -3,6 +3,7 @@ package dev.overtoneparty.mixin;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import dev.musicplayer.model.MusicEntity;
 import dev.musicplayer.model.Track;
 import dev.overtoneparty.OvertoneParty;
@@ -13,11 +14,18 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URLEncoder;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -43,6 +51,11 @@ public abstract class SoundCloudLibraryMixin implements SoundCloudExt {
 
     @Shadow
     private static List<Track> tracks(JsonObject page) {
+        throw new AssertionError();
+    }
+
+    @Shadow
+    private String clientId() throws Exception {
         throw new AssertionError();
     }
 
@@ -149,33 +162,123 @@ public abstract class SoundCloudLibraryMixin implements SoundCloudExt {
         }
     }
 
-    /** Читает треки плейлиста/альбома; у Overtone для этого нет отдельного метода. */
+    /**
+     * Читает треки плейлиста/альбома; у Overtone для этого нет отдельного метода.
+     *
+     * <p>Важно: endpoint {@code /playlists/<id>} возвращает для большинства треков
+     * только заглушки ({@code id}, {@code kind}, {@code policy}) без названия. Парсер
+     * Overtone такие записи отбрасывает, поэтому раньше в наборе показывалось
+     * 5 треков из 61. Здесь мы собираем все id и досылаем их пачками в
+     * {@code /tracks?ids=...}, чтобы получить полноценные объекты с названиями,
+     * исполнителями и длительностью.
+     */
     @Unique
     private List<Track> overtoneParty$readSet(String id) throws Exception {
         String path = "/playlists/" + URLEncoder.encode(id, StandardCharsets.UTF_8) + "?limit=200";
-        List<Track> all = new ArrayList<>();
-        Set<String> seen = new HashSet<>();
+        List<String> ids = new ArrayList<>();
+        Set<String> seenIds = new HashSet<>();
         int pages = 0;
         while (path != null && pages < 50) {
             JsonObject set = this.api("GET", path);
-            // tracks() Overtone умеет читать только массив "collection",
-            // а детали набора возвращают массив "tracks". Следующие страницы
-            // могут сразу прийти с "collection" — тогда обёртка не нужна.
-            JsonObject wrapped = set;
-            JsonElement collection = set == null ? null : set.get("collection");
-            if (collection == null || !collection.isJsonArray()) {
-                wrapped = new JsonObject();
-                JsonElement list = set == null ? null : set.get("tracks");
-                if (list != null && list.isJsonArray()) wrapped.add("collection", list);
-            }
-            for (Track t : tracks(wrapped)) {
-                if (t != null && t.id() != null && seen.add(t.id())) all.add(t);
+            for (String trackId : overtoneParty$trackIds(set)) {
+                if (seenIds.add(trackId)) ids.add(trackId);
             }
             pages++;
             path = SoundCloudPaths.nextPath(set);
         }
-        OvertoneParty.LOGGER.info("SoundCloud: набор {} — {} треков", id, all.size());
+
+        Map<String, JsonObject> full = overtoneParty$fullTracks(ids);
+        JsonArray collection = new JsonArray();
+        for (String trackId : ids) {
+            JsonObject track = full.get(trackId);
+            if (track != null) collection.add(track);
+        }
+        JsonObject wrapped = new JsonObject();
+        wrapped.add("collection", collection);
+
+        List<Track> all = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (Track t : tracks(wrapped)) {
+            if (t != null && t.id() != null && seen.add(t.id())) all.add(t);
+        }
+        OvertoneParty.LOGGER.info("SoundCloud: набор {} — id {}, загружено {}, треков {}",
+                id, ids.size(), full.size(), all.size());
         return all;
+    }
+
+    /** Все id треков на одной странице набора, в порядке следования. */
+    @Unique
+    private static List<String> overtoneParty$trackIds(JsonObject set) {
+        List<String> ids = new ArrayList<>();
+        if (set == null) return ids;
+        JsonElement list = set.get("tracks");
+        if (list == null || !list.isJsonArray()) list = set.get("collection");
+        if (list == null || !list.isJsonArray()) return ids;
+        for (JsonElement e : list.getAsJsonArray()) {
+            if (!e.isJsonObject()) continue;
+            JsonObject o = e.getAsJsonObject();
+            JsonElement nested = o.get("track");
+            if (nested != null && nested.isJsonObject()) o = nested.getAsJsonObject();
+            String trackId = overtoneParty$str(o, "id");
+            if (!trackId.isEmpty()) ids.add(trackId);
+        }
+        return ids;
+    }
+
+    /**
+     * Подгружает полные данные треков пачками по 50: API SoundCloud не принимает
+     * больше id в одном запросе, а {@code api()} Overtone не умеет читать массив
+     * верхнего уровня, поэтому здесь свой HTTP-запрос.
+     */
+    @Unique
+    private Map<String, JsonObject> overtoneParty$fullTracks(List<String> ids) throws Exception {
+        Map<String, JsonObject> result = new HashMap<>();
+        if (ids.isEmpty()) return result;
+        String client;
+        try {
+            client = this.clientId();
+        } catch (Throwable t) {
+            client = "";
+        }
+        if (client == null || client.isBlank()) client = SoundCloudPaths.CLIENT_ID;
+
+        for (int from = 0; from < ids.size(); from += 50) {
+            int to = Math.min(from + 50, ids.size());
+            String url = SoundCloudPaths.ROOT + "/tracks?ids=" + String.join(",", ids.subList(from, to))
+                    + "&client_id=" + client;
+            JsonElement parsed = JsonParser.parseString(overtoneParty$http(url));
+            if (parsed == null || !parsed.isJsonArray()) continue;
+            for (JsonElement e : parsed.getAsJsonArray()) {
+                if (!e.isJsonObject()) continue;
+                JsonObject o = e.getAsJsonObject();
+                String trackId = overtoneParty$str(o, "id");
+                if (!trackId.isEmpty()) result.put(trackId, o);
+            }
+        }
+        return result;
+    }
+
+    @Unique
+    private static String overtoneParty$http(String url) throws Exception {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(20000);
+        conn.setRequestProperty("Accept", "application/json");
+        conn.setRequestProperty("User-Agent", "OvertoneParty/0.3.3");
+        try {
+            int code = conn.getResponseCode();
+            if (code < 200 || code >= 300) throw new IOException("HTTP " + code + " for " + url);
+            StringBuilder body = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) body.append(line);
+            }
+            return body.toString();
+        } finally {
+            conn.disconnect();
+        }
     }
 
     @Unique

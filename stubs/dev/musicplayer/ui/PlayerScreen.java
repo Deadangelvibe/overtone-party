@@ -20,6 +20,7 @@ public class PlayerScreen {
     private boolean queueMode;
     private int mouseX;
     private int mouseY;
+    private int pageHeaderY;
 
     private List<?> items() {
         return List.of();
@@ -48,5 +49,8 @@ public class PlayerScreen {
     }
 
     private void drawList(Canvas g) {
+    }
+
+    private void renderMain(Canvas g) {
     }
 }
