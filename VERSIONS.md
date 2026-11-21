@@ -8,6 +8,7 @@
 | 0.2.7 | `versions/overtone-party-0.2.7.jar` | Замена любого недоступного трека, 9 с таймаут, SoundCloud как резерв |
 | 0.3.0 | `versions/overtone-party-0.3.0.jar` | Несколько независимых вечеринок, обзор, открытые/приватные группы |
 | 0.3.1 | `versions/overtone-party-0.3.1.jar` | Иконка мода с кооп-значком, автор `deadangelvibe` |
+| 0.3.2 | `versions/overtone-party-0.3.2.jar` | Плейлисты и альбомы SoundCloud, все лайки, вкладки в Overtone |
 
 Версии 0.2.0–0.2.5 отдельными файлами не сохранились — их изменения описаны в `README.md`.
 
@@ -17,8 +18,8 @@
 `C:\Users\Александр\AppData\Local\Programs\PortableGit\cmd\git.exe`.
 GitHub CLI: `C:\Users\Александр\AppData\Local\Programs\GitHubCLI\bin\gh.exe`.
 
-Локальная история уже создана: `v0.2.6` → `v0.2.7` → `v0.3.0` (ветка `main`, рабочее дерево чистое).
-Осталось только авторизоваться в GitHub и запушить.
+Локальная история: `v0.2.6` → `v0.2.7` → `v0.3.0` → `v0.3.1` → `v0.3.2` (ветка `main`).
+GitHub CLI уже авторизован под аккаунтом `Deadangelvibe`, remote `origin` настроен.
 
 Самый простой способ — запустить из папки проекта:
 

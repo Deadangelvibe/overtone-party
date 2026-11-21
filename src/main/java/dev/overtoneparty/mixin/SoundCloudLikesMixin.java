@@ -1,9 +1,10 @@
 package dev.overtoneparty.mixin;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.musicplayer.model.Track;
 import dev.overtoneparty.OvertoneParty;
+import dev.overtoneparty.integration.SoundCloudLibrary;
+import dev.overtoneparty.integration.SoundCloudPaths;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -69,6 +70,9 @@ public abstract class SoundCloudLikesMixin {
 
     @Unique
     private List<Track> overtoneParty$loadAll(String uid) throws Exception {
+        // Плейлисты и альбомы грузим параллельно с лайками: они появятся
+        // отдельными вкладками в окне Overtone.
+        SoundCloudLibrary.ensureLoaded();
         List<Track> all = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         String path = "/users/" + uid + "/track_likes?limit=200";
@@ -80,7 +84,7 @@ public abstract class SoundCloudLikesMixin {
                 if (t != null && t.id() != null && seen.add(t.id())) all.add(t);
             }
             pages++;
-            path = overtoneParty$nextPath(page);
+            path = SoundCloudPaths.nextPath(page);
         }
         if (this.canLike()) {
             for (Track t : all) this.likedIds.add(t.id());
@@ -88,30 +92,5 @@ public abstract class SoundCloudLikesMixin {
         OvertoneParty.LOGGER.info("Лайки SoundCloud: загружено {} треков ({} страниц)",
                 all.size(), pages);
         return all;
-    }
-
-    /**
-     * Превращает {@code next_href} в путь для {@link #api}, отбрасывая чужой хост
-     * и {@code client_id} (его всё равно добавит сам Overtone).
-     */
-    @Unique
-    private static String overtoneParty$nextPath(JsonObject page) {
-        JsonElement next = page == null ? null : page.get("next_href");
-        if (next == null || next.isJsonNull()) return null;
-        String href = next.getAsString();
-        if (href == null || href.isBlank()) return null;
-        String root = "https://api-v2.soundcloud.com";
-        String path = href.startsWith(root) ? href.substring(root.length()) : href;
-        if (!path.startsWith("/")) return null;
-        int q = path.indexOf('?');
-        if (q < 0) return path;
-        String base = path.substring(0, q);
-        StringBuilder query = new StringBuilder();
-        for (String kv : path.substring(q + 1).split("&")) {
-            if (kv.isEmpty() || kv.startsWith("client_id=")) continue;
-            if (query.length() > 0) query.append('&');
-            query.append(kv);
-        }
-        return query.length() == 0 ? base : base + "?" + query;
     }
 }

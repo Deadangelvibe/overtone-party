@@ -1,10 +1,13 @@
 package dev.musicplayer.controller;
 
-import dev.musicplayer.model.Track;
+import dev.musicplayer.model.MusicEntity;
+import dev.musicplayer.model.Page;
 import dev.musicplayer.model.Platform;
+import dev.musicplayer.model.Track;
 import dev.musicplayer.provider.MusicProvider;
 import dev.musicplayer.provider.SoundCloudProvider;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** Compile-time stub. The real singleton lives in Overtone. */
@@ -17,6 +20,21 @@ public class PlayerController {
     public volatile Track current;
     public volatile float volume;
     public volatile boolean idle;
+    public volatile String status;
+    public volatile boolean waveView;
+    public volatile List<Track> results;
+
+    public volatile Tab tab;
+    public volatile List<MusicEntity> artists;
+    public volatile List<MusicEntity> albums;
+    public volatile List<MusicEntity> playlists;
+    public volatile List<MusicEntity> stations;
+
+    private final List<Page> trail = new ArrayList<>();
+
+    public enum Tab {
+        TRACKS, ARTISTS, ALBUMS, PLAYLISTS, STATIONS
+    }
 
     public synchronized void playFrom(List<Track> list, int i) {
     }
@@ -59,5 +77,15 @@ public class PlayerController {
 
     public MusicProvider engine() {
         return null;
+    }
+
+    public Page page() {
+        return null;
+    }
+
+    public void open(MusicEntity entity) {
+    }
+
+    public void back() {
     }
 }

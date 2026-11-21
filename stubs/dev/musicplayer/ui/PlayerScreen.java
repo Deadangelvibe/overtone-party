@@ -25,6 +25,14 @@ public class PlayerScreen {
         return List.of();
     }
 
+    private List<PlayerController.Tab> visibleTabs() {
+        return List.of();
+    }
+
+    private boolean waveShown() {
+        return false;
+    }
+
     private Track trackAt(int idx) {
         return null;
     }
