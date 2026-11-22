@@ -7,15 +7,14 @@ import dev.musicplayer.ui.PlayerScreen;
 import dev.musicplayer.ui.Shapes;
 import dev.overtoneparty.client.OvertoneBridge;
 import dev.overtoneparty.integration.PartyAddAction;
+import dev.overtoneparty.integration.PartyScreenAccess;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 import java.util.List;
 
@@ -57,6 +56,12 @@ public abstract class PlayerScreenMixin {
     @Unique
     private boolean party$button;
 
+    /** Сдвиг строк в списке лайков: его задаёт PlayerScreenLibraryMixin. */
+    @Unique
+    private boolean party$likedShift() {
+        return ((PartyScreenAccess) (Object) this).overtoneParty$likedShift();
+    }
+
     @Shadow
     private List<?> items() {
         throw new AssertionError();
@@ -65,14 +70,6 @@ public abstract class PlayerScreenMixin {
     @Shadow
     private void rowButton(int x, int y, int w, Runnable action) {
         throw new AssertionError();
-    }
-
-    // Строка списка уже на 16 px: место под нашу кнопку.
-    @ModifyArgs(method = "buildMain", at = @At(value = "INVOKE",
-            target = "Ldev/musicplayer/ui/PlayerScreen;rowButton(IIILjava/lang/Runnable;)V", ordinal = 0))
-    private void party$narrowRow(Args args) {
-        if (this.queueMode) return;
-        args.set(2, (int) args.get(2) - 16);
     }
 
     @Inject(method = "buildMain", at = @At("HEAD"))
@@ -88,7 +85,7 @@ public abstract class PlayerScreenMixin {
         if (this.queueMode) return;
         if (w != 16 || x != this.lx + this.lw - 34) return;
         this.party$button = true;
-        int row = (y - this.listTop) / 24;
+        int row = (y - this.listTop - (this.party$likedShift() ? 24 : 0)) / 24;
         this.rowButton(this.lx + this.lw - 50, y, 16,
                 new PartyAddAction((PlayerScreen) (Object) this, row));
     }
@@ -114,7 +111,7 @@ public abstract class PlayerScreenMixin {
             if (idx >= res.size()) break;
             if (!(res.get(idx) instanceof Track t)) continue;
 
-            int y = this.listTop + i * 24;
+            int y = this.listTop + (this.party$likedShift() ? 24 : 0) + i * 24;
             boolean hov = this.mouseX >= this.lx && this.mouseX < this.lx + this.lw
                     && this.mouseY >= y && this.mouseY < y + 22;
             boolean isCur = cur != null && t.id() != null && t.id().equals(cur.id());

@@ -1,48 +1,74 @@
 package dev.overtoneparty.integration;
 
 import dev.musicplayer.controller.PlayerController;
+import dev.musicplayer.model.MusicEntity;
 import dev.musicplayer.model.Page;
 import dev.musicplayer.model.Platform;
 import dev.musicplayer.model.Track;
-import dev.overtoneparty.client.PartyClient;
-import dev.overtoneparty.model.PartyTrack;
+import dev.overtoneparty.OvertoneParty;
+import net.minecraft.client.MinecraftClient;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.concurrent.CompletionException;
 
 /**
- * Действие кнопки «♪+ Всё» в заголовке открытого плейлиста или альбома.
+ * Действие маленькой кнопки {@code ♪+} справа от строки альбома, плейлиста или
+ * артиста. Работает и с SoundCloud, и с Яндекс Музыкой.
  *
- * <p>Список берётся из страницы Overtone в момент клика: треки набора
- * подгружаются асинхронно, поэтому кнопка создаётся заранее, а содержимое
- * страницы к моменту нажатия может измениться. Отдельный класс нужен, потому
- * что лямбды внутри миксина могут ссылаться на несуществующий в рантайме
- * класс самого миксина.
+ * <p>Кнопки строк создаются один раз, а прокрутка в Overtone меняет страницу без
+ * пересборки экрана. Поэтому действие хранит только номер видимой строки, а нужный
+ * набор определяет в момент нажатия через {@link PartyScreenAccess}.
  */
 public final class PartyAddSetAction implements Runnable {
     private final PlayerController ctl;
+    private final PartyScreenAccess screen;
+    private final int row;
 
-    public PartyAddSetAction(PlayerController ctl) {
+    public PartyAddSetAction(PlayerController ctl, PartyScreenAccess screen, int row) {
         this.ctl = ctl;
+        this.screen = screen;
+        this.row = row;
     }
 
     @Override
     public void run() {
-        if (this.ctl == null || this.ctl.platform != Platform.SOUNDCLOUD) return;
-        Page page = this.ctl.page();
-        if (page == null) return;
+        if (this.ctl == null) return;
+        List<MusicEntity> sets = PartySets.forCurrentTab(this.ctl);
+        if (sets == null) return;
 
-        List<PartyTrack> tracks = new ArrayList<>();
-        Set<String> seen = new HashSet<>();
-        for (Track t : page.tracks()) {
-            PartyTrack pt = PartyTrack.from(t);
-            if (PartyTrack.isBlank(pt)) continue;
-            String key = PartyTrack.providerKey(pt.provider()) + '|' + pt.id();
-            if (seen.add(key)) tracks.add(pt);
+        int index = this.screen.overtoneParty$page() * this.screen.overtoneParty$rows() + this.row;
+        if (index < 0 || index >= sets.size()) return;
+        MusicEntity entity = sets.get(index);
+        if (entity.isMine()) return; // «Мои плейлисты» — не набор треков.
+        String label = (this.ctl.platform == Platform.YANDEX ? "Яндекс" : "SoundCloud")
+                + ": " + entity.title();
+
+        if (this.ctl.platform == Platform.SOUNDCLOUD) {
+            if (!(this.ctl.soundcloud instanceof SoundCloudExt ext)) return;
+            ext.overtoneParty$loadSet(entity).whenComplete((tracks, error) ->
+                    overtoneParty$loaded(label, tracks, error));
+        } else if (this.ctl.platform == Platform.YANDEX) {
+            this.ctl.yandex.open(entity).whenComplete((page, error) -> {
+                List<Track> tracks = error == null && page != null ? page.tracks() : null;
+                this.overtoneParty$loaded(label, tracks, error);
+            });
         }
-        if (tracks.isEmpty()) return;
-        PartyClient.addTracks(tracks);
+    }
+
+    /** Обработка результата: ошибки только логируем, очередь трогаем в игровом потоке. */
+    private void overtoneParty$loaded(String label, List<Track> tracks, Throwable error) {
+        if (error != null) {
+            Throwable cause = error instanceof CompletionException && error.getCause() != null
+                    ? error.getCause() : error;
+            OvertoneParty.LOGGER.warn("Не удалось загрузить набор «{}»: {}",
+                    label, String.valueOf(cause.getMessage()));
+            return;
+        }
+        if (tracks == null || tracks.isEmpty()) {
+            OvertoneParty.LOGGER.warn("Набор «{}» пуст", label);
+            return;
+        }
+        // Загрузка идёт в потоке провайдера, отправку в сеть делаем в игровом потоке.
+        MinecraftClient.getInstance().execute(() -> PartyQueue.addTracks(tracks, label));
     }
 }

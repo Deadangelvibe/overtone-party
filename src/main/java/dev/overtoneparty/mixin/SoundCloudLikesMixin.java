@@ -3,6 +3,7 @@ package dev.overtoneparty.mixin;
 import com.google.gson.JsonObject;
 import dev.musicplayer.model.Track;
 import dev.overtoneparty.OvertoneParty;
+import dev.overtoneparty.integration.LikedState;
 import dev.overtoneparty.integration.SoundCloudLibrary;
 import dev.overtoneparty.integration.SoundCloudPaths;
 import org.spongepowered.asm.mixin.Final;
@@ -61,7 +62,10 @@ public abstract class SoundCloudLikesMixin {
         if (uid == null) return;
         cir.setReturnValue(CompletableFuture.supplyAsync(() -> {
             try {
-                return this.overtoneParty$loadAll(uid);
+                List<Track> all = this.overtoneParty$loadAll(uid);
+                // Запоминаем именно тот список, который Overtone положит в ctl.results.
+                LikedState.cache(all);
+                return all;
             } catch (Exception e) {
                 throw new CompletionException(e);
             }

@@ -3,9 +3,13 @@ package dev.overtoneparty.mixin;
 import dev.musicplayer.controller.PlayerController;
 import dev.musicplayer.model.MusicEntity;
 import dev.musicplayer.model.Page;
+import dev.musicplayer.model.Platform;
 import dev.musicplayer.provider.SoundCloudProvider;
+import dev.musicplayer.provider.YandexMusicProvider;
+import dev.overtoneparty.integration.LikedState;
 import dev.overtoneparty.integration.SoundCloudExt;
 import dev.overtoneparty.integration.SoundCloudLibrary;
+import dev.overtoneparty.integration.YandexExt;
 import net.minecraft.client.MinecraftClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,18 +21,21 @@ import java.util.List;
 import java.util.concurrent.CompletionException;
 
 /**
- * Открытие плейлиста или альбома SoundCloud внутри Overtone.
+ * Открытие наборов и отслеживание списка лайков.
  *
- * <p>Оригинальный {@code open(MusicEntity)} умеет работать только с Яндексом и
- * Spotify. Для наших сущностей мы грузим треки через провайдер SoundCloud и
- * кладём обычную {@link Page} в историю Overtone — после этого окно отображает
- * список треков, кнопки «играть всё», «назад» и нашу кнопку ♪+ как обычно.
+ * <p>Для SoundCloud наших сущностей оригинальный {@code open(MusicEntity)} не
+ * работает: треки грузятся через провайдер и кладутся в обычную {@link Page}.
+ * Для Яндекса открытие альбома/артиста оставляем Overtone, но подгружаем его
+ * лайкнутые альбомы и артистов отдельным миксином провайдера.
  */
 @Mixin(value = PlayerController.class, remap = false)
 public abstract class PlayerControllerLibraryMixin {
-    // Модификатор final у целевого поля повторять не нужно: мы только читаем поле.
+    // Модификатор final у целевых полей повторять не нужно: мы только читаем поле.
     @Shadow
     public SoundCloudProvider soundcloud;
+
+    @Shadow
+    public YandexMusicProvider yandex;
 
     @Shadow
     private List<Page> trail;
@@ -44,6 +51,7 @@ public abstract class PlayerControllerLibraryMixin {
 
     @Inject(method = "open", at = @At("HEAD"), cancellable = true)
     private void overtoneParty$openSet(MusicEntity entity, CallbackInfo ci) {
+        LikedState.clear();
         if (!SoundCloudLibrary.isOurEntity(entity)) return;
         ci.cancel();
         if (!(this.soundcloud instanceof SoundCloudExt ext)) return;
@@ -65,5 +73,25 @@ public abstract class PlayerControllerLibraryMixin {
                 this.status = page.tracks().isEmpty() ? "В наборе нет треков" : "";
             });
         });
+    }
+
+    @Inject(method = "selectPlatform", at = @At("TAIL"))
+    private void overtoneParty$selectPlatform(Platform platform, CallbackInfo ci) {
+        // Любая смена площадки закрывает прежний список лайков.
+        LikedState.clear();
+        if (platform == Platform.YANDEX && this.yandex instanceof YandexExt ext) {
+            ext.overtoneParty$loadLikedSets();
+        }
+    }
+
+    @Inject(method = "loadLiked", at = @At("HEAD"))
+    private void overtoneParty$loadLiked(CallbackInfo ci) {
+        LikedState.clear();
+        if (this.yandex instanceof YandexExt ext) ext.overtoneParty$loadLikedSets();
+    }
+
+    @Inject(method = "back", at = @At("HEAD"))
+    private void overtoneParty$back(CallbackInfo ci) {
+        LikedState.clear();
     }
 }

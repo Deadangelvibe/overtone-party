@@ -8,7 +8,8 @@
     "PlayerScreenLibraryMixin",
     "PlayerControllerLibraryMixin",
     "SoundCloudLikesMixin",
-    "SoundCloudLibraryMixin"
+    "SoundCloudLibraryMixin",
+    "YandexLikesMixin"
   ],
   "injectors": {
     "defaultRequire": 1

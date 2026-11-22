@@ -6,6 +6,7 @@ import dev.musicplayer.model.Platform;
 import dev.musicplayer.model.Track;
 import dev.musicplayer.provider.MusicProvider;
 import dev.musicplayer.provider.SoundCloudProvider;
+import dev.musicplayer.provider.YandexMusicProvider;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,7 @@ public class PlayerController {
     public static PlayerController I;
 
     public final SoundCloudProvider soundcloud = null;
+    public final YandexMusicProvider yandex = null;
 
     public volatile Platform platform;
     public volatile Track current;

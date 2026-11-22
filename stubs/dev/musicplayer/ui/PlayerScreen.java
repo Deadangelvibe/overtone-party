@@ -2,6 +2,7 @@ package dev.musicplayer.ui;
 
 import dev.musicplayer.compat.Canvas;
 import dev.musicplayer.controller.PlayerController;
+import dev.musicplayer.model.MusicEntity;
 import dev.musicplayer.model.Track;
 
 import java.util.List;
@@ -49,6 +50,9 @@ public class PlayerScreen {
     }
 
     private void drawList(Canvas g) {
+    }
+
+    private void drawEntityRow(Canvas g, MusicEntity entity, int y, boolean selected) {
     }
 
     private void renderMain(Canvas g) {
