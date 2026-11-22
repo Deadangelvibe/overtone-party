@@ -185,14 +185,8 @@
 - Minecraft 1.20.1, Fabric Loader.
 - **Overtone** (`musicplayer`) — у всех участников и на сервере.
 - Fabric API.
-- На Forge-клиенте (как в сборке «Lunchtime Cozy Create and Cooking») — **Sinytra Connector**
-  и Forgified Fabric API (например, внутри `txnilib-forge`). Мод на сервере тоже нужен:
-  при игре по LAN это встроенный сервер хоста, то есть достаточно поставить мод в клиент хоста.
-- Если сервер требует `takeitout`, ставьте **только** `takeitout-1.1.27-forge-1.20.1.jar`.
-  В пачке уже есть `MaFgLib` (Forge-порт malilib) — он содержит нужные TakeItOut классы
-  `fi.dy.masa.malilib.*`. Дополнительный `malilib-fabric-1.20.1-0.16.3.jar` ставить **нельзя**:
-  два jar с одинаковыми пакетами конфликтуют и игра падает с `MixinApplyError`
-  (`MixinInGameHud not found`).
+- На Forge-клиенте **Sinytra Connector** и Forgified Fabric API (например, внутри `txnilib-forge`).
+- Мод на сервере тоже нужен: при игре по LAN это встроенный сервер хоста, то есть достаточно поставить мод в клиент хоста.
 
 ## Установка
 
